@@ -2,12 +2,14 @@
 
 # %% import the required packages
 import os
+import numpy as np
 import copy
 import torch
 import torchvision
 from torchvision.datasets.vision import data
 import torchprune as tp
 from torchprune.util import tensor
+from torchprune.util.train import load_checkpoint, save_checkpoint
 from torch import multiprocessing as mp
 from ultralytics import YOLO
 from ultralytics.yolo.v8.detect import DetectionTrainer
@@ -25,11 +27,11 @@ from ultralytics.yolo.v8.detect import DetectionTrainer
 def train_pruned_net(rank, m, save_dir):
     os.environ["RANK"] = str(rank)
     os.environ["LOCAL_RANK"] = str(rank)
-    m.train(device="0,1", resume=True, epochs=1, save_dir=save_dir)
+    m.train(device="0,1,2,3", resume=True, epochs=50, save_dir=save_dir)
 
 if __name__ == "__main__":
     det = DetectionTrainer(
-            overrides={"data": "coco.yaml", "model": "yolov8n.pt", "device": "0,1"}
+            overrides={"data": "coco.yaml", "model": "yolov8n.pt", "device":0}
     )
     det._setup_train(-1, 1)
 
@@ -57,9 +59,18 @@ if __name__ == "__main__":
     net_filter_pruned = tp.ALDSNet(net, det.test_loader, det.criterion)
     net_filter_pruned.cuda()
     for index, keep_ratio in enumerate(np.geomspace(0.9, 0.3, 6).tolist()):
-        bool first_index = index == 0
-        if not first_index:
-        net_filter_pruned.compress(keep_ratio=keep_ratio, from_original=first_index, initialize=first_index)
+        file_name = f"nets/it{index}.pt"
+        if os.path.isfile(file_name):
+            load_checkpoint(file_name, net_filter_pruned, loc="cuda:0")
+            print(
+                f"The loaded network has {net_filter_pruned.size()} parameters and "
+                f"{net_filter_pruned.flops()} FLOPs left."
+            )
+            print("===========================")
+
+            continue
+        first_index = index == 0
+        net_filter_pruned.compress(keep_ratio=keep_ratio, from_original=first_index)
         net_filter_pruned.compressed_net.register_sparsity_pattern()
         net_filter_pruned.cpu()
         print(
@@ -73,8 +84,10 @@ if __name__ == "__main__":
         # Retrain the filter-pruned network now on the GPU
         net_filter_pruned = net_filter_pruned.cuda()
         yolo_model.model = net_filter_pruned.compressed_net.torchnet
-        mp.spawn(train_pruned_net, nprocs=2, args=(yolo_model, f"it{index}"))
+        mp.spawn(train_pruned_net, nprocs=4, args=(yolo_model, f"it{index}"))
+        yolo_model.to("cuda:0")
         net_filter_pruned.compressed_net.torchnet = yolo_model.model
+        save_checkpoint(f"nets/it{index}.pt", net_filter_pruned, 50)
 
     # %% Test at the end
     # print("\nTesting on test data set:")

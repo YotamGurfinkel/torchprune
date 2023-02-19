@@ -404,6 +404,7 @@ class CompressedNet(BaseCompressedNet):
 
         # do a couple of forward+backward passes
         at_least_one_batch = False
+        print("DOING PASSES")
         with torch.enable_grad():
             for images, targets in self._loader_s:
                 if len(images) < 2:

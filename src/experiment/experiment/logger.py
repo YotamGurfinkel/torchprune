@@ -781,7 +781,7 @@ class Logger:
         # grapher stats
         num_layers = samples_plot.shape[1]
         num_layers = int(num_layers)
-        layers = np.fromiter(range(num_layers), dtype=np.int) + 1
+        layers = np.fromiter(range(num_layers), dtype=int) + 1
 
         # data for sample sizes per layer plot with standard convention
         layers = np.tile(layers, (self._num_algorithms, 1)).transpose()

@@ -31,7 +31,7 @@ class Normalize(object):
 class ToRawTensor(object):
     def __call__(self, rgb_img, label_img=None):
         rgb_img = F.pil_to_tensor(rgb_img)
-        label_img = torch.LongTensor(np.array(label_img).astype(np.int64))
+        label_img = torch.LongTensor(np.array(label_img).astype(int64))
         return rgb_img, label_img
 
 class RandomFlip(object):

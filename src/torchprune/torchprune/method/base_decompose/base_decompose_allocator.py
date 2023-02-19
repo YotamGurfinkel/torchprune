@@ -64,7 +64,7 @@ class BaseDecomposeAllocator(BaseFilterAllocator, ABC):
             desired_k_split = desired_k_split.cpu().numpy()
         else:
             desired_k_split = (
-                np.zeros(len(k_splits), dtype=np.int) + desired_k_split
+                np.zeros(len(k_splits), dtype=int) + desired_k_split
             )
 
         for ell, mod in enumerate(self._net.compressible_layers):

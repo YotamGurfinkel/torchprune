@@ -188,7 +188,7 @@ class Evaluator(object):
             return nets
         else:
             # get indices with np.linspace
-            idxs = np.linspace(0, len(nets) - 1, max_num, dtype=np.int)
+            idxs = np.linspace(0, len(nets) - 1, max_num, dtype=int)
             # can only index with index list in numpy...
             return np.array(nets)[idxs].tolist()
 
